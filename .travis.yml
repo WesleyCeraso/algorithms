@@ -1,0 +1,24 @@
+language: cpp
+
+before_install:
+  - mkdir ~/cmake_tmp
+  - cd ~/cmake_tmp
+  - wget http://www.cmake.org/files/v3.3/cmake-3.3.2-Linux-x86_64.tar.gz -O cmake3.tar.gz
+  - tar xf cmake3.tar.gz -C . --strip-components=1
+  - export PATH=~/cmake_tmp/bin:$PATH
+  - cd -
+
+script:
+  - mkdir build
+  - cd build
+  - cmake ../ -DCMAKE_BUILD_TYPE=Debug
+  - cmake --build .
+
+after_success:
+  - ctest -R UnitTests
+#  - ctest -R FunctionalTests
+  
+install: true
+
+after_install:
+  - rm -rf ~/cmake_tmp
