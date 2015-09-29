@@ -26,3 +26,22 @@
 *.exe
 *.out
 *.app
+
+# Backup files
+*.bkp
+*.old
+*.orig
+*.backup
+
+# CMake files
+build/
+*.user
+
+# QtCreator files
+CMakeLists.txt.*
+
+# Hidden files
+.*
+
+# Hunter files
+_3rdParty/
