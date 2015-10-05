@@ -3,9 +3,9 @@
 An object oriented library that provides general algorithms.
 
 ## Quickstart
-Clone (https://gitlab.com/wesleyceraso/algorithms):
+Clone (https://github.com/WesleyCeraso/algorithms.git):
 
-	git clone https://gitlab.com/wesleyceraso/algorithms.git
+	git clone https://github.com/WesleyCeraso/algorithms.git
 
 Configure:
 
