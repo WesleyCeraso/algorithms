@@ -40,9 +40,7 @@ protected:
     bool equal(const CoordinateListMatrixIterator& rhs) const;
     difference_type distance_to(const CoordinateListMatrixIterator& rhs) const;
 
-    template <bool C = Const, typename std::enable_if<C, int>::type = 0>
     return_type dereference() const;
-
     template <bool C = Const, typename std::enable_if<!C, int>::type = 0>
     return_type dereference();
 
@@ -67,7 +65,7 @@ struct matrix_iterator_traits<CoordinateListMatrixIterator<T, Const>>
     typedef typename CoordinateListMatrix<T>::value_type value_type;
     typedef typename CoordinateListMatrix<T>::size_type size_type;
     typedef typename CoordinateListMatrix<T>::difference_type difference_type;
-    typedef typename std::conditional<Const, typename CoordinateListMatrix<T>::const_reference, typename CoordinateListMatrix<T>::reference>::type return_type;
+    typedef typename std::conditional<Const, typename std::add_const<value_type>::type, typename std::add_lvalue_reference<value_type>::type>::type return_type;
 };
 
 template <class T, bool Const>
@@ -161,7 +159,6 @@ bool CoordinateListMatrixIterator<T, Const>::equal(const CoordinateListMatrixIte
 }
 
 template <class T, bool Const>
-template <bool C, typename std::enable_if<C, int>::type>
 auto CoordinateListMatrixIterator<T, Const>::dereference() const -> return_type
 {
     return isIteratorSyncronized() ? std::get<2>(*m_iterator) : s_zero;

@@ -40,6 +40,8 @@ protected:
     difference_type distance_to(const DenseMatrixIterator& rhs) const;
 
     return_type dereference() const;
+    template <bool C = Const, typename std::enable_if<!C, int>::type = 0>
+    return_type dereference();
 
     std::tuple<size_type, size_type> rowColumn() const;
 
@@ -54,7 +56,7 @@ struct matrix_iterator_traits<DenseMatrixIterator<T, Const>>
     typedef typename DenseMatrix<T>::value_type value_type;
     typedef typename DenseMatrix<T>::size_type size_type;
     typedef typename DenseMatrix<T>::difference_type difference_type;
-    typedef typename std::conditional<Const, typename DenseMatrix<T>::const_reference, typename DenseMatrix<T>::reference>::type return_type;
+    typedef typename std::conditional<Const, typename std::add_const<value_type>::type, typename std::add_lvalue_reference<value_type>::type>::type return_type;
 };
 
 template <class T, bool Const>
@@ -131,6 +133,13 @@ auto DenseMatrixIterator<T, Const>::distance_to(const DenseMatrixIterator& rhs) 
 
 template <class T, bool Const>
 auto DenseMatrixIterator<T, Const>::dereference() const -> return_type
+{
+    return m_matrix->m_values[m_matrixPos];
+}
+
+template <class T, bool Const>
+template <bool C, typename std::enable_if<!C, int>::type>
+auto DenseMatrixIterator<T, Const>::dereference() -> return_type
 {
     return m_matrix->m_values[m_matrixPos];
 }

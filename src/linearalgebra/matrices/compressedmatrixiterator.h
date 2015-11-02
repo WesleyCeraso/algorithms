@@ -40,9 +40,7 @@ protected:
     bool equal(const CompressedMatrixIterator& rhs) const;
     difference_type distance_to(const CompressedMatrixIterator& rhs) const;
 
-    template <bool C = Const, typename std::enable_if<C, int>::type = 0>
     return_type dereference() const;
-
     template <bool C = Const, typename std::enable_if<!C, int>::type = 0>
     return_type dereference();
 
@@ -65,11 +63,11 @@ struct matrix_iterator_traits<CompressedMatrixIterator<T, Const>>
     typedef typename CompressedMatrix<T>::value_type value_type;
     typedef typename CompressedMatrix<T>::size_type size_type;
     typedef typename CompressedMatrix<T>::difference_type difference_type;
-    typedef typename std::conditional<Const, typename CompressedMatrix<T>::const_reference, typename CompressedMatrix<T>::reference>::type return_type;
+    typedef typename std::conditional<Const, typename std::add_const<value_type>::type, typename std::add_lvalue_reference<value_type>::type>::type return_type;
 };
 
 template <class T, bool Const>
-const typename CompressedMatrixIterator<T, Const>::value_type CompressedMatrixIterator<T, Const>::s_zero = typename CompressedMatrixIterator::value_type();
+const typename CompressedMatrixIterator<T, Const>::value_type CompressedMatrixIterator<T, Const>::s_zero = typename CompressedMatrixIterator<T, Const>::value_type();
 
 template <class T, bool Const>
 CompressedMatrixIterator<T, Const>::CompressedMatrixIterator(CompressedMatrix<T>* matrix, const size_type row, const size_type column):
@@ -169,7 +167,6 @@ bool CompressedMatrixIterator<T, Const>::equal(const CompressedMatrixIterator<T,
 }
 
 template <class T, bool Const>
-template <bool C, typename std::enable_if<C, int>::type>
 auto CompressedMatrixIterator<T, Const>::dereference() const -> return_type
 {
     return isIteratorSyncronized() ? m_iterator->first : s_zero;

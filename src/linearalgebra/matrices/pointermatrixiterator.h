@@ -42,6 +42,8 @@ protected:
     difference_type distance_to(const PointerMatrixIterator& rhs) const;
 
     return_type dereference() const;
+    template <bool C = Const, typename std::enable_if<!C, int>::type = 0>
+    return_type dereference();
 
     std::tuple<size_type, size_type> rowColumn() const;
 
@@ -133,6 +135,13 @@ auto PointerMatrixIterator<T, Const>::distance_to(const PointerMatrixIterator& r
 
 template <class T, bool Const>
 auto PointerMatrixIterator<T, Const>::dereference() const -> return_type
+{
+    return return_type(&m_matrix->m_values[m_matrixPos]);
+}
+
+template <class T, bool Const>
+template <bool C, typename std::enable_if<!C, int>::type>
+auto PointerMatrixIterator<T, Const>::dereference() -> return_type
 {
     return return_type(&m_matrix->m_values[m_matrixPos]);
 }

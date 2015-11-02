@@ -32,7 +32,7 @@ public:
     bool operator==(const I& rhs) const {return static_cast<const I*>(this)->equal(rhs);}
     bool operator!=(const I& rhs) const {return !static_cast<const I*>(this)->equal(rhs);}
 
-    return_type operator[](const difference_type diff) const {I t(*static_cast<I*>(this)); t += diff; return t.dereference();}
+    return_type operator[](const difference_type diff) const {I t(*static_cast<const I*>(this)); t += diff; return t.dereference();}
     return_type operator*() const {return static_cast<const I*>(this)->dereference();}
     return_type operator->() const {return static_cast<const I*>(this)->dereference();}
 
