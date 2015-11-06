@@ -196,7 +196,7 @@ R MatrixOperations<R>::subtract(const Matrix<T>& lhs, const Matrix<TT>& rhs)
         }
         else if(itL.row() > itR.row() || (itL.row() == itR.row() && itL.column() > itR.column()))
         {
-            result[itR.row()][itR.column()] = -(double)*itR;
+            result[itR.row()][itR.column()] = -*itR;
             itR.nextNonZero();
         }
         else
