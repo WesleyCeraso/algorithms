@@ -6,7 +6,9 @@
 template <class>
 class CompressedMatrix;
 
+#ifndef _MSC_VER
 template <>
+#endif
 template<class T>
 class MatrixMultiplyRhsHandler<CompressedMatrix<T>>
 {
