@@ -3,7 +3,6 @@
 #include <src/linearalgebra/matrices/densematrix.h>
 #include <src/linearalgebra/matrices/matrixutils.h>
 #include <src/linearalgebra/matrices/pointermatrix.h>
-#include <src/linearalgebra/matrices/coordinatelistmatrix.h>
 #include <src/linearalgebra/solvers/stabilizedbiconjugategradientmethod.h>
 #include <src/linearalgebra/solvers/conjugategradientmethod.h>
 #include <src/linearalgebra/solvers/biconjugategradientmethod.h>
