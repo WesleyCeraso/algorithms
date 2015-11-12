@@ -78,7 +78,7 @@ public:
 protected:
     const unsigned int points;
     const unsigned int total_points;
-    CompressedMatrix<double> coeficients;
+    DenseMatrix<double> coeficients;
     DenseMatrix<double> constants;
 };
 

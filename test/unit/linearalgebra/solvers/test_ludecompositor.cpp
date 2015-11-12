@@ -5,7 +5,7 @@
 
 TEST(LuDecompositor, decompose)
 {
-    CompressedMatrix<double> coeficients(3, 3);
+    DenseMatrix<double> coeficients(3, 3);
 	coeficients[0][0] = 10;
 	coeficients[0][1] = 1;
 	coeficients[1][0] = 1;
