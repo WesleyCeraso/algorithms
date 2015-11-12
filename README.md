@@ -1,11 +1,11 @@
-# Algorithms [![Build Status](https://travis-ci.org/WesleyCeraso/algorithms.svg)](https://travis-ci.org/WesleyCeraso/algorithms)
+# Algorithms [![build status](https://gitlab.com/ci/projects/20416/status.png?ref=master)](https://gitlab.com/ci/projects/20416?ref=master)
 
 An object oriented library that provides general algorithms.
 
 ## Quickstart
-Clone (https://github.com/WesleyCeraso/algorithms.git):
+Clone (https://gitlab.com/wesleyceraso/algorithms):
 
-	git clone https://github.com/WesleyCeraso/algorithms.git
+	git clone https://gitlab.com/wesleyceraso/algorithms.git
 
 Configure:
 
