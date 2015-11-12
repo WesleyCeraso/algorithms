@@ -16,9 +16,6 @@ class MatrixIterator : public std::iterator<std::random_access_iterator_tag, typ
     typedef typename matrix_iterator_traits<I>::return_type return_type;
 
 public:
-    I& nextNonZero() {static_cast<I*>(this)->incrementNonZero(); return *static_cast<I*>(this);}
-    I& previousNonZero() {static_cast<I*>(this)->decrementNonZero(); return *static_cast<I*>(this);}
-
     I& operator+=(const difference_type diff) {static_cast<I*>(this)->advance(diff); return *static_cast<I*>(this);}
     I& operator++() {static_cast<I*>(this)->increment(); return *static_cast<I*>(this);}
     I operator++(int) {I t(*static_cast<I*>(this)); static_cast<I*>(this)->increment(); return t;}
@@ -32,24 +29,28 @@ public:
     bool operator==(const I& rhs) const {return static_cast<const I*>(this)->equal(rhs);}
     bool operator!=(const I& rhs) const {return !static_cast<const I*>(this)->equal(rhs);}
 
-    return_type operator[](const difference_type diff) const {I t(*static_cast<const I*>(this)); t += diff; return t.dereference();}
     return_type operator*() const {return static_cast<const I*>(this)->dereference();}
     return_type operator->() const {return static_cast<const I*>(this)->dereference();}
 
-    return_type operator[](const difference_type diff) {I t(*static_cast<I*>(this)); t += diff; return t.dereference();}
     return_type operator*() {return static_cast<I*>(this)->dereference();}
     return_type operator->() {return static_cast<I*>(this)->dereference();}
 
     difference_type operator-(const I& rhs) const {return static_cast<const I*>(this)->distance_to(rhs);}
 
-    size_type row() const {return std::get<0>(static_cast<const I*>(this)->rowColumn());}
-    size_type column() const {return std::get<1>(static_cast<const I*>(this)->rowColumn());}
-    std::tuple<size_type, size_type> rowColumn() const {return static_cast<I*>(this)->rowColumn();}
+    size_type row() const {return static_cast<const I*>(this)->currentRow();}
+    size_type column() const {return static_cast<const I*>(this)->currentColumn();}
+    std::tuple<size_type, size_type> rowColumn() const {return std::make_tuple(row(), column());}
 
 protected:
     MatrixIterator() {}
-    MatrixIterator(const MatrixIterator&) {}
-    MatrixIterator& operator=(const MatrixIterator&) {return *this;}
+    template <class TT>
+    MatrixIterator(const MatrixIterator<TT>&) {}
+    template <class TT>
+    MatrixIterator& operator=(const MatrixIterator<TT>&) {return *this;}
+    template <class TT>
+    MatrixIterator(MatrixIterator<TT>&&) {}
+    template <class TT>
+    MatrixIterator& operator=(MatrixIterator<TT>&&) {return *this;}
 };
 
 #endif

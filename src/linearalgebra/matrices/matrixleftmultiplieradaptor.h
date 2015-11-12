@@ -1,13 +1,13 @@
-#ifndef MATRIXMULTIPLYLHSHANDLER_H
-#define MATRIXMULTIPLYLHSHANDLER_H
+#ifndef MATRIXLEFTMULTIPLIERADAPTOR_H
+#define MATRIXLEFTMULTIPLIERADAPTOR_H
 
 template <class T>
-class MatrixMultiplyLhsHandler
+class MatrixLeftMultiplierAdaptor
 {
     typedef typename T::const_iterator const_iterator;
 
 public:
-    MatrixMultiplyLhsHandler(const T& lhs):
+    MatrixLeftMultiplierAdaptor(const T& lhs):
         m_lhs(lhs),
         m_row(typename T::size_type()),
         m_column(typename T::size_type())
@@ -28,19 +28,15 @@ public:
         return m_lhs[m_row][m_column];
     }
 
-    void nextRowFirstColumn()
+    void beginRow(typename T::size_type row)
     {
-        ++m_row;
+        m_row = row;
+        m_column = 0;
     }
 
-    void nextColumnSameRow()
+    void nextColumn()
     {
         ++m_column;
-    }
-
-    void resetColumn()
-    {
-        m_column = typename T::size_type();
     }
 
     bool endRow() const

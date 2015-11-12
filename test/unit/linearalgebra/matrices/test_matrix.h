@@ -28,33 +28,6 @@ TYPED_TEST_P(MatrixTest, identity)
     EXPECT_EQ(MatrixUtils::identity<TypeParam>(3, value_type(5.)), myIdentity);
 }
 
-TYPED_TEST_P(MatrixTest, iterator)
-{
-	typedef typename TypeParam::value_type value_type;
-
-    TypeParam matrix(3, 3);
-    matrix[0][0] = value_type(1.);
-    matrix[1][1] = value_type(2.);
-    matrix[2][2] = value_type(3.);
-
-    const TypeParam& cmatrix = matrix;
-
-    typename TypeParam::const_iterator beg = matrix.begin();
-    EXPECT_EQ(beg, matrix.beginNonZero());
-    EXPECT_EQ(*beg, value_type(1.));
-
-    EXPECT_EQ(*beg++, cmatrix[0][0]);
-    EXPECT_EQ(*++beg, cmatrix[0][2]);
-    EXPECT_EQ(*beg, 0);
-
-    EXPECT_EQ(*beg.nextNonZero(), value_type(2.));
-
-    EXPECT_EQ(*beg.nextNonZero(), value_type(3.));
-
-    EXPECT_EQ(beg.nextNonZero(), matrix.endNonZero());
-    EXPECT_EQ(beg, matrix.end());
-}
-
 TYPED_TEST_P(MatrixTest, constructor)
 {
     EXPECT_DEATH(TypeParam(0, 0), ".*");
@@ -339,7 +312,6 @@ TYPED_TEST_P(MatrixTest, operatorSubtraction)
 
 REGISTER_TYPED_TEST_CASE_P(MatrixTest,
                            identity,
-                           iterator,
                            constructor,
                            operator_At,
                            rows,

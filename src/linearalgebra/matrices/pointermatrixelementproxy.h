@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <cassert>
 #include <type_traits>
-#include <iomanip>
 
 template <class> class PointerMatrix;
 

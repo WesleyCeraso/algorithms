@@ -6,6 +6,7 @@
 #include <cassert>
 #include <type_traits>
 #include "matrixiterator.h"
+#include "densematrixiteratortraits.h"
 
 template <class> class DenseMatrix;
 
@@ -22,17 +23,21 @@ public:
     typedef typename matrix_iterator_traits<DenseMatrixIterator>::return_type return_type;
 
 public:
-    DenseMatrixIterator(DenseMatrix<T>* matrix, const size_type row, const size_type column);
+    DenseMatrixIterator(DenseMatrix<T>& matrix, const size_type row);
 
-    DenseMatrixIterator(const DenseMatrixIterator<T, false>& rhs);
-    DenseMatrixIterator& operator=(const DenseMatrixIterator<T, false>& rhs);
+    template <bool C, typename std::enable_if<!C || Const>::type* = nullptr>
+    DenseMatrixIterator(const DenseMatrixIterator<T, C>& rhs);
+    template <bool C, typename std::enable_if<!C || Const>::type* = nullptr>
+    DenseMatrixIterator& operator=(const DenseMatrixIterator<T, C>& rhs);
+
+    template <bool C, typename std::enable_if<!C || Const>::type* = nullptr>
+    DenseMatrixIterator(DenseMatrixIterator<T, C>&& rhs);
+    template <bool C, typename std::enable_if<!C || Const>::type* = nullptr>
+    DenseMatrixIterator& operator=(DenseMatrixIterator<T, C>&& rhs);
 
 protected:
     void increment();
     void decrement();
-
-    void incrementNonZero();
-    void decrementNonZero();
 
     void advance(const difference_type diff);
 
@@ -40,115 +45,100 @@ protected:
     difference_type distance_to(const DenseMatrixIterator& rhs) const;
 
     return_type dereference() const;
-    template <bool C = Const, typename std::enable_if<!C, int>::type = 0>
-    return_type dereference();
 
-    std::tuple<size_type, size_type> rowColumn() const;
+    size_type currentRow() const;
+    size_type currentColumn() const;
 
 private:
-    DenseMatrix<value_type>* m_matrix;
-    size_type m_matrixPos;
+    DenseMatrix<value_type>& m_matrix;
+    size_type m_index;
 };
 
 template <class T, bool Const>
-struct matrix_iterator_traits<DenseMatrixIterator<T, Const>>
-{
-    typedef typename DenseMatrix<T>::value_type value_type;
-    typedef typename DenseMatrix<T>::size_type size_type;
-    typedef typename DenseMatrix<T>::difference_type difference_type;
-    typedef typename std::conditional<Const, typename std::add_const<value_type>::type, typename std::add_lvalue_reference<value_type>::type>::type return_type;
-};
-
-template <class T, bool Const>
-DenseMatrixIterator<T, Const>::DenseMatrixIterator(DenseMatrix<T>* matrix, const size_type row, const size_type column):
+DenseMatrixIterator<T, Const>::DenseMatrixIterator(DenseMatrix<T>& matrix, const size_type row):
     MatrixIterator<DenseMatrixIterator<T, Const>>(),
     m_matrix(matrix),
-    m_matrixPos(row * m_matrix->columns() + column)
+    m_index(row * m_matrix.columns())
 {}
 
 template <class T, bool Const>
-DenseMatrixIterator<T, Const>::DenseMatrixIterator(const DenseMatrixIterator<T, false>& rhs):
+template <bool C, typename std::enable_if<!C || Const>::type*>
+DenseMatrixIterator<T, Const>::DenseMatrixIterator(const DenseMatrixIterator<T, C>& rhs):
     MatrixIterator<DenseMatrixIterator<T, Const>>(),
     m_matrix(rhs.m_matrix),
-    m_matrixPos(rhs.m_matrixPos)
+    m_index(rhs.m_index)
 {}
 
 template <class T, bool Const>
-DenseMatrixIterator<T, Const>& DenseMatrixIterator<T, Const>::operator=(const DenseMatrixIterator<T, false>& rhs)
+template <bool C, typename std::enable_if<!C || Const>::type*>
+DenseMatrixIterator<T, Const>& DenseMatrixIterator<T, Const>::operator=(const DenseMatrixIterator<T, C>& rhs)
 {
-    assert(m_matrix == rhs.m_matrix);
-    m_matrixPos = rhs.m_matrixPos;
+    m_index = rhs.m_index;
+    return *this;
+}
+
+template <class T, bool Const>
+template <bool C, typename std::enable_if<!C || Const>::type*>
+DenseMatrixIterator<T, Const>::DenseMatrixIterator(DenseMatrixIterator<T, C>&& rhs):
+    MatrixIterator<DenseMatrixIterator<T, Const>>(),
+    m_matrix(rhs.m_matrix),
+    m_index(std::move(rhs.m_index))
+{}
+
+template <class T, bool Const>
+template <bool C, typename std::enable_if<!C || Const>::type*>
+DenseMatrixIterator<T, Const>& DenseMatrixIterator<T, Const>::operator=(DenseMatrixIterator<T, C>&& rhs)
+{
+    m_index = std::move(rhs.m_index);
     return *this;
 }
 
 template <class T, bool Const>
 void DenseMatrixIterator<T, Const>::increment()
 {
-    ++m_matrixPos;
+    ++m_index;
 }
 
 template <class T, bool Const>
 void DenseMatrixIterator<T, Const>::decrement()
 {
-    --m_matrixPos;
-}
-
-template <class T, bool Const>
-void DenseMatrixIterator<T, Const>::incrementNonZero()
-{
-    do
-    {
-        ++m_matrixPos;
-    }
-    while(m_matrixPos < m_matrix->m_values.size() && !m_matrix->m_values[m_matrixPos]);
-}
-
-template <class T, bool Const>
-void DenseMatrixIterator<T, Const>::decrementNonZero()
-{
-    do
-    {
-        --m_matrixPos;
-    }
-    while(m_matrixPos && !m_matrix->m_values[m_matrixPos]);
+    --m_index;
 }
 
 template <class T, bool Const>
 void DenseMatrixIterator<T, Const>::advance(const difference_type diff)
 {
-    m_matrixPos += diff;
+    m_index += diff;
 }
 
 template <class T, bool Const>
 bool DenseMatrixIterator<T, Const>::equal(const DenseMatrixIterator<T, Const>& rhs) const
 {
-    return m_matrixPos == rhs.m_matrixPos && m_matrix == rhs.m_matrix;
+    return m_index == rhs.m_index;
 }
 
 template <class T, bool Const>
 auto DenseMatrixIterator<T, Const>::distance_to(const DenseMatrixIterator& rhs) const -> difference_type
 {
-    return rhs.m_matrixPos - m_matrixPos;
+    return rhs.m_index - m_index;
 }
 
 template <class T, bool Const>
 auto DenseMatrixIterator<T, Const>::dereference() const -> return_type
 {
-    return m_matrix->m_values[m_matrixPos];
+    return m_matrix.m_values[m_index];
 }
 
 template <class T, bool Const>
-template <bool C, typename std::enable_if<!C, int>::type>
-auto DenseMatrixIterator<T, Const>::dereference() -> return_type
+auto DenseMatrixIterator<T, Const>::currentRow() const -> size_type
 {
-    return m_matrix->m_values[m_matrixPos];
+    return m_index / m_matrix.columns();
 }
 
 template <class T, bool Const>
-auto DenseMatrixIterator<T, Const>::rowColumn() const -> std::tuple<size_type, size_type>
+auto DenseMatrixIterator<T, Const>::currentColumn() const -> size_type
 {
-    ldiv_t d = std::div(static_cast<long>(m_matrixPos), static_cast<long>(m_matrix->columns()));
-    return std::make_tuple(static_cast<size_type>(d.quot), static_cast<size_type>(d.rem));
+    return m_index % m_matrix.columns();
 }
 
 #endif

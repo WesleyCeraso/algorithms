@@ -2,36 +2,13 @@
 #define COMPRESSEDMATRIX_H
 
 #include "matrix.h"
-#include "compressedmatrixiterator.h"
-#include "compressedmatrixmultiplylhshandler.h"
-#include "compressedmatrixmultiplyrhshandler.h"
-
-template <class T>
-struct matrix_traits<CompressedMatrix<T>>
-{
-    typedef T value_type;
-    typedef size_t size_type;
-    typedef ptrdiff_t difference_type;
-    typedef T& reference;
-    typedef const T& const_reference;
-    typedef T* pointer;
-    typedef const T* const_pointer;
-
-    typedef CompressedMatrixIterator<T, false> iterator;
-    typedef CompressedMatrixIterator<T, true> const_iterator;
-};
+#include "compressedmatrixtraits.h"
 
 template <class T = double>
 class CompressedMatrix : public Matrix<CompressedMatrix<T>>
 {
     friend class Matrix<CompressedMatrix<T>>;
     template<typename> friend class CompressedMatrix;
-    friend class CompressedMatrixIterator<T, false>;
-    friend class CompressedMatrixIterator<T, true>;
-
-    typedef std::vector<std::pair<T, typename CompressedMatrix::size_type>> container_type;
-    typedef typename container_type::iterator container_iterator;
-    typedef typename container_type::const_iterator container_const_iterator;
 
 public:
     typedef typename matrix_traits<CompressedMatrix>::value_type value_type;
@@ -41,26 +18,37 @@ public:
     typedef typename matrix_traits<CompressedMatrix>::const_reference const_reference;
     typedef typename matrix_traits<CompressedMatrix>::pointer pointer;
     typedef typename matrix_traits<CompressedMatrix>::const_pointer const_pointer;
-
+    typedef typename matrix_traits<CompressedMatrix>::acessor acessor;
+    typedef typename matrix_traits<CompressedMatrix>::const_acessor const_acessor;
     typedef typename matrix_traits<CompressedMatrix>::iterator iterator;
     typedef typename matrix_traits<CompressedMatrix>::const_iterator const_iterator;
+
+    friend acessor;
+    friend const_acessor;
+    friend iterator;
+    friend const_iterator;
 
 public:
     CompressedMatrix(size_type rows, size_type columns, T value = T());
 
+    CompressedMatrix(size_type rows, size_type columns, const std::vector<std::tuple<value_type, size_type>>& valueColumnIndex, const std::vector<size_type>& rowIndex);
+    CompressedMatrix(size_type rows, size_type columns, std::vector<std::tuple<value_type, size_type>>&& valueColumnIndex, std::vector<size_type>&& rowIndex);
+
+    CompressedMatrix(size_type rows, size_type columns, const std::vector<std::tuple<size_type, size_type, value_type>>& triplets);
+
     CompressedMatrix(const CompressedMatrix& rhs);
+    CompressedMatrix& operator=(const CompressedMatrix& rhs);
+
+    CompressedMatrix(CompressedMatrix&& rhs);
+    CompressedMatrix& operator=(CompressedMatrix&& rhs);
 
     template <class D>
     CompressedMatrix(const CompressedMatrix<D>& rhs);
-
-    template <class D>
-    CompressedMatrix(const Matrix<D>& rhs);
-
-    CompressedMatrix& operator=(const CompressedMatrix& rhs);
-
     template <class D>
     CompressedMatrix& operator=(const CompressedMatrix<D>& rhs);
 
+    template <class D>
+    CompressedMatrix(const Matrix<D>& rhs);
     template <class D>
     CompressedMatrix& operator=(const Matrix<D>& rhs);
 
@@ -75,17 +63,17 @@ private:
 
 template <class T>
 CompressedMatrix<T>::CompressedMatrix(size_type rows, size_type columns, T value):
-    Matrix<CompressedMatrix>(rows, columns)
+    Matrix<CompressedMatrix>(rows, columns),
+    m_valueIndex(value_type(value) != value_type() ? rows * columns : size_type()),
+    m_rowIndex(rows + 1)
 {
-    assert(rows && columns);
-    m_rowIndex.resize(rows + 1);
-    if (value != T())
+    if (value_type(value) != value_type())
     {
-        for (size_type i = 0; i < rows; ++i)
+        for (size_type i = size_type(); i < rows; ++i)
         {
-            for (size_type j = 0; j < columns; ++j)
+            for (size_type j = size_type(); j < columns; ++j)
             {
-                m_valueIndex.push_back(std::make_pair(value, j));
+                m_valueIndex[i * columns + j] = (std::make_pair(value, j));
             }
             m_rowIndex[i + 1] = columns * (i + 1);
         }
@@ -93,67 +81,122 @@ CompressedMatrix<T>::CompressedMatrix(size_type rows, size_type columns, T value
 }
 
 template <class T>
-CompressedMatrix<T>::CompressedMatrix(const CompressedMatrix& rhs):
-    Matrix<CompressedMatrix>(rhs.rows(), rhs.columns())
+CompressedMatrix<T>::CompressedMatrix(size_type rows, size_type columns, const std::vector<std::tuple<value_type, size_type>>& valueColumnIndex, const std::vector<size_type>& rowIndex):
+    Matrix<CompressedMatrix>(rows, columns),
+    m_valueIndex(valueColumnIndex),
+    m_rowIndex(rowIndex)
+{}
+
+template <class T>
+CompressedMatrix<T>::CompressedMatrix(size_type rows, size_type columns, std::vector<std::tuple<value_type, size_type>>&& valueColumnIndex, std::vector<size_type>&& rowIndex):
+    Matrix<CompressedMatrix>(rows, columns),
+    m_valueIndex(std::move(valueColumnIndex)),
+    m_rowIndex(std::move(rowIndex))
+{}
+
+template <class T>
+CompressedMatrix<T>::CompressedMatrix(size_type rows, size_type columns, const std::vector<std::tuple<size_type, size_type, value_type>>& triplets):
+    Matrix<CompressedMatrix>(rows, columns),
+    m_valueIndex(triplets.size()),
+    m_rowIndex(rows + 1)
 {
+    for (size_type i = size_type(); i < triplets.size(); ++i)
+    {
+        m_valueIndex[i] = std::make_pair(std::get<2>(triplets[i]), std::get<1>(triplets[i]));
+        ++m_rowIndex[std::get<0>(triplets[i]) + 1];
+    }
+
+    for (size_type i = 1; i < m_rowIndex.size(); ++i)
+    {
+        m_rowIndex[i] += m_rowIndex[i - 1];
+    }
+}
+
+template <class T>
+CompressedMatrix<T>::CompressedMatrix(const CompressedMatrix& rhs):
+    Matrix<CompressedMatrix>(rhs),
+    m_valueIndex(rhs.m_valueIndex),
+    m_rowIndex(rhs.m_rowIndex)
+{}
+
+template <class T>
+CompressedMatrix<T>& CompressedMatrix<T>::operator=(const CompressedMatrix& rhs)
+{
+    Matrix<CompressedMatrix>::operator=(rhs);
     m_rowIndex = rhs.m_rowIndex;
     m_valueIndex = rhs.m_valueIndex;
+    return *this;
+}
+
+template <class T>
+CompressedMatrix<T>::CompressedMatrix(CompressedMatrix&& rhs):
+    Matrix<CompressedMatrix>(std::move(rhs)),
+    m_valueIndex(std::move(rhs.m_valueIndex)),
+    m_rowIndex(std::move(rhs.m_rowIndex))
+{}
+
+template <class T>
+CompressedMatrix<T>& CompressedMatrix<T>::operator=(CompressedMatrix&& rhs)
+{
+    Matrix<CompressedMatrix>::operator=(std::move(rhs));
+    m_rowIndex = std::move(rhs.m_rowIndex);
+    m_valueIndex = std::move(rhs.m_valueIndex);
+    return *this;
 }
 
 template <class T>
 template <class D>
 CompressedMatrix<T>::CompressedMatrix(const CompressedMatrix<D>& rhs):
-    Matrix<CompressedMatrix>(rhs.rows(), rhs.columns())
+    Matrix<CompressedMatrix>(rhs.rows(), rhs.columns()),
+    m_valueIndex(rhs.m_valueIndex.size()),
+    m_rowIndex(rhs.m_rowIndex)
 {
-    m_rowIndex = rhs.m_rowIndex;
-    m_valueIndex.resize(rhs.m_valueIndex.size());
-    for(size_type i = 0; i < rhs.m_valueIndex.size(); ++i)
-    {
-        m_valueIndex[i] = rhs.m_valueIndex[i];
-    }
-}
-
-template <class T>
-template <class D>
-CompressedMatrix<T>::CompressedMatrix(const Matrix<D>& rhs):
-    Matrix<CompressedMatrix>(rhs.rows(), rhs.columns())
-{
-    typename Matrix<D>::const_iterator beg = rhs.begin();
-    typename Matrix<D>::const_iterator end = rhs.end();
-    for(; beg != end; beg.nextNonZero())
-    {
-        *(this)[beg.row()][beg.column()] = *beg;
-    }
-}
-
-template <class T>
-CompressedMatrix<T>& CompressedMatrix<T>::operator=(const CompressedMatrix& rhs)
-{
-    assert(this->rows() == rhs.rows() && this->columns() == rhs.columns());
-    m_rowIndex = rhs.m_rowIndex;
-    m_valueIndex = rhs.m_valueIndex;
-    return *this;
+    m_valueIndex.assign(rhs.m_valueIndex.begin(), rhs.m_valueIndex.end());
 }
 
 template <class T>
 template <class D>
 CompressedMatrix<T>& CompressedMatrix<T>::operator=(const CompressedMatrix<D>& rhs)
 {
-    assert(this->rows() == rhs.rows() && this->columns() == rhs.columns());
+    Matrix<CompressedMatrix>::operator=(rhs);
     m_rowIndex = rhs.m_rowIndex;
-    m_valueIndex.resize(rhs.m_valueIndex.size());
-    for(size_type i = 0; i < rhs.m_valueIndex.size(); ++i)
-    {
-        m_valueIndex[i] = rhs.m_valueIndex[i];
-    }
+    m_valueIndex.assign(rhs.m_valueIndex.begin(), rhs.m_valueIndex.end());
     return *this;
+}
+
+template <class T>
+template <class D>
+CompressedMatrix<T>::CompressedMatrix(const Matrix<D>& rhs):
+    Matrix<CompressedMatrix>(rhs.rows(), rhs.columns()),
+    m_rowIndex(rhs.rows() + 1)
+{
+    typename Matrix<D>::const_iterator cur = rhs.begin();
+    typename Matrix<D>::const_iterator end = rhs.end();
+
+    size_type currentRow = size_type();
+    while (cur != end && *cur != value_type())
+    {
+        m_valueIndex.push_back(std::make_pair(*cur, cur.column()));
+        while (currentRow < cur.row())
+        {
+            m_rowIndex[currentRow + 1] = m_valueIndex.size() - m_rowIndex[currentRow];
+            ++currentRow;
+        }
+        ++cur;
+    }
+    m_valueIndex.shrink_to_fit();
+
+    for (; currentRow < this->rows(); ++currentRow)
+    {
+        m_rowIndex[currentRow + 1] = m_valueIndex.size() - m_rowIndex[currentRow];
+    }
 }
 
 template <class T>
 template <class D>
 CompressedMatrix<T>& CompressedMatrix<T>::operator=(const Matrix<D>& rhs)
 {
-    assert(this->rows() == rhs.rows() && this->columns() == rhs.columns());
+    Matrix<CompressedMatrix>::operator=(rhs);
     this->clear();
     typename CompressedMatrix<D>::const_iterator beg = rhs.begin();
     typename CompressedMatrix<D>::const_iterator end = rhs.end();
@@ -178,7 +221,7 @@ CompressedMatrix<T> CompressedMatrix<T>::doTranspose() const
     std::vector<std::tuple<T, size_type, size_type>> m_valueColumnRow;
     m_valueColumnRow.resize(m_valueIndex.size());
 
-    for(size_type row = 0; row < this->rows(); ++row)
+    for(size_type row = size_type(); row < this->rows(); ++row)
     {
         for(size_type i = m_rowIndex[row]; i < m_rowIndex[row + 1]; ++i)
         {
@@ -194,7 +237,7 @@ CompressedMatrix<T> CompressedMatrix<T>::doTranspose() const
     t.m_rowIndex.resize(this->columns() + 1);
     size_type nextRow = 1;
 
-    for(size_type i = 0; i < m_valueColumnRow.size(); ++i)
+    for(size_type i = size_type(); i < m_valueColumnRow.size(); ++i)
     {
         t.m_valueIndex[i] = std::make_pair(std::get<0>(m_valueColumnRow[i]), std::get<2>(m_valueColumnRow[i]));
 

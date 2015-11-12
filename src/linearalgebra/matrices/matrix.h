@@ -1,6 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include <cassert>
 #include "matrixmultiplication.h"
 #include "matrixsummation.h"
 #include "matrixsubtraction.h"
@@ -8,7 +9,9 @@
 
 template <class T>
 struct matrix_traits
-{};
+{
+    static const bool is_matrix = false;
+};
 
 template <class T>
 class Matrix
@@ -25,6 +28,9 @@ public:
     typedef typename matrix_traits<T>::iterator iterator;
     typedef typename matrix_traits<T>::const_iterator const_iterator;
 
+    typedef typename matrix_traits<T>::acessor acessor;
+    typedef typename matrix_traits<T>::const_acessor const_acessor;
+
 public:
     size_type rows() const {return m_rows;}
     size_type columns() const {return m_columns;}
@@ -32,136 +38,140 @@ public:
     void clear() {static_cast<T*>(this)->doClear();}
     T transpose() const {return static_cast<const T*>(this)->doTranspose();}
 
-    iterator operator[](size_type index) {return iterator(static_cast<T*>(this), index, 0);}
-    const_iterator operator[](size_type index) const {return const_cast<Matrix*>(this)->operator[](index);}
+    acessor operator[](size_type index) {return acessor(*static_cast<T*>(this), index);}
+    const_acessor operator[](size_type index) const {return const_cast<Matrix*>(this)->operator[](index);}
 
-    iterator begin() {return iterator(static_cast<T*>(this), 0, 0);}
-    const_iterator begin() const {return const_cast<Matrix*>(this)->begin();}
-    const_iterator cbegin() const {return const_cast<Matrix*>(this)->begin();}
+    iterator begin(const size_type row = size_type()) {return iterator(*static_cast<T*>(this), row);}
+    const_iterator begin(const size_type row = size_type()) const {return const_cast<Matrix*>(this)->begin(row);}
+    const_iterator cbegin(const size_type row = size_type()) const {return const_cast<Matrix*>(this)->begin(row);}
 
-    iterator end() {return iterator(static_cast<T*>(this), rows(), 0);}
+    iterator end() {return iterator(*static_cast<T*>(this), rows());}
     const_iterator end() const {return const_cast<Matrix*>(this)->end();}
     const_iterator cend() const {return const_cast<Matrix*>(this)->end();}
 
-    iterator beginNonZero() {iterator it = begin(); return it != end() && *it ? it : it.nextNonZero();}
-    const_iterator beginNonZero() const {return const_cast<Matrix*>(this)->beginNonZero();}
-    const_iterator cbeginNonZero() const {return const_cast<Matrix*>(this)->beginNonZero();}
-
-    iterator endNonZero() {return end();}
-    const_iterator endNonZero() const {return const_cast<Matrix*>(this)->endNonZero();}
-    const_iterator cendNonZero() const {return const_cast<Matrix*>(this)->endNonZero();}
-
     template <class TT>
-    bool operator==(const Matrix<TT>& rhs) const
-    {
-        const Matrix& lhs = *this;
-        assert(lhs.rows() == rhs.rows() && lhs.columns() == rhs.columns());
-
-        typename Matrix::const_iterator itL = lhs.beginNonZero();
-        typename Matrix::const_iterator endL = lhs.endNonZero();
-        typename Matrix<TT>::const_iterator itR = rhs.beginNonZero();
-        typename Matrix<TT>::const_iterator endR = rhs.endNonZero();
-
-        while(itL != endL && itR != endR)
-        {
-            if(*itL != *itR || itL.row() != itR.row() || itL.column() != itR.column())
-            {
-                return false;
-            }
-
-            itL.nextNonZero();
-            itR.nextNonZero();
-        }
-
-        return itL == endL && itR == endR;
-    }
-
+    bool operator==(const Matrix<TT>& rhs) const;
     template <class TT>
-    bool operator!=(const Matrix<TT>& rhs) const
-    {
-        return !this->operator ==(rhs);
-    }
-
-    friend std::ostream& operator<<(std::ostream& of, const Matrix& rhs)
-    {
-        std::streamsize width = of.width();
-        std::streamsize precision = of.precision();
-
-        for(size_type i = 0; i < rhs.rows(); ++i)
-        {
-            for(size_type j = 0; j < rhs.columns(); ++j)
-            {
-                of.width(width);
-                of.precision(precision);
-                of << rhs[i][j];
-            }
-
-            of << std::endl;
-        }
-
-        return of;
-    }
+    bool operator!=(const Matrix<TT>& rhs) const;
 
 protected:
-    Matrix(size_type rows, size_type columns): m_rows(rows), m_columns(columns) {}
-    Matrix(const Matrix& rhs): m_rows(rhs.rows()), m_columns(rhs.columns()) {}
+    Matrix(size_type rows, size_type columns);
+
+    Matrix(const Matrix& rhs);
+    Matrix& operator=(const Matrix& rhs);
+
+    Matrix(Matrix&& rhs);
+    Matrix& operator=(Matrix&& rhs);
+
     template <class TT>
-    Matrix(const Matrix<TT>& rhs): m_rows(rhs.rows()), m_columns(rhs.columns()) {}
+    Matrix(const Matrix<TT>& rhs);
+    template <class TT>
+    Matrix& operator=(const Matrix<TT>& rhs);
 
 private:
     size_type m_rows;
     size_type m_columns;
 };
 
-// Multiplication -------------------------------------------------------------
-template <class T, class TT>
-MatrixMultiplication<Matrix<T>, Matrix<TT>> operator*(const Matrix<T>& lhs, const Matrix<TT>& rhs)
+template <class T>
+template <class TT>
+bool Matrix<T>::operator==(const Matrix<TT>& rhs) const
 {
-    return MatrixMultiplication<Matrix<T>, Matrix<TT>>(lhs, rhs);
-}
-template <class T, class D, typename std::enable_if<std::is_arithmetic<D>::value, int>::type = 0>
-MatrixMultiplication<Matrix<T>, D> operator*(const Matrix<T>& lhs, const D& rhs)
-{
-    return MatrixMultiplication<Matrix<T>, D>(lhs, rhs);
-}
-template <class T, class D, typename std::enable_if<std::is_arithmetic<D>::value, int>::type = 0>
-MatrixMultiplication<D, Matrix<T>> operator*(const D& lhs, const Matrix<T>& rhs)
-{
-    return MatrixMultiplication<D, Matrix<T>>(lhs, rhs);
+    const Matrix& lhs = *this;
+    assert(lhs.rows() == rhs.rows() && lhs.columns() == rhs.columns());
+
+    for(size_type i = size_type(); i < rhs.rows(); ++i)
+    {
+        for(size_type j = size_type(); j < rhs.columns(); ++j)
+        {
+            if (lhs[i][j] != rhs[i][j])
+                return false;
+        }
+    }
+
+    return true;
 }
 
-//Sum -------------------------------------------------------------------------
-template <class T, class TT>
-MatrixSummation<Matrix<T>, Matrix<TT>> operator+(const Matrix<T>& lhs, const Matrix<TT>& rhs)
+template <class T>
+template <class TT>
+bool Matrix<T>::operator!=(const Matrix<TT>& rhs) const
 {
-    return MatrixSummation<Matrix<T>, Matrix<TT>>(lhs, rhs);
-}
-template <class T, class D, typename std::enable_if<std::is_arithmetic<D>::value, int>::type = 0>
-MatrixSummation<Matrix<T>, D> operator+(const Matrix<T>& lhs, const D& rhs)
-{
-    return MatrixSummation<Matrix<T>, D>(lhs, rhs);
-}
-template <class T, class D, typename std::enable_if<std::is_arithmetic<D>::value, int>::type = 0>
-MatrixSummation<D, Matrix<T>> operator+(const D& lhs, const Matrix<T>& rhs)
-{
-    return MatrixSummation<D, Matrix<T>>(lhs, rhs);
+    return !this->operator ==(rhs);
 }
 
-//Subtraction -------------------------------------------------------------------------
-template <class T, class TT>
-MatrixSubtraction<Matrix<T>, Matrix<TT>> operator-(const Matrix<T>& lhs, const Matrix<TT>& rhs)
+template <class T>
+std::ostream& operator<<(std::ostream& of, const Matrix<T>& rhs)
 {
-    return MatrixSubtraction<Matrix<T>, Matrix<TT>>(lhs, rhs);
+    typedef typename Matrix<T>::size_type size_type;
+
+    std::streamsize width = std::max(of.width(), std::streamsize(2));
+    std::streamsize precision = of.precision();
+
+    for(size_type i = size_type(); i < rhs.rows(); ++i)
+    {
+        of.width(0);
+        of << "|";
+        for(size_type j = size_type(); j < rhs.columns(); ++j)
+        {
+            of.width(width);
+            of.precision(precision);
+            of << rhs[i][j];
+        }
+
+        of.width(width);
+        of << "|" << std::endl;
+    }
+
+    return of;
 }
-template <class T, class D, typename std::enable_if<std::is_arithmetic<D>::value, int>::type = 0>
-MatrixSubtraction<Matrix<T>, D> operator-(const Matrix<T>& lhs, const D& rhs)
+
+template <class T>
+Matrix<T>::Matrix(size_type rows, size_type columns):
+    m_rows(rows),
+    m_columns(columns)
 {
-    return MatrixSubtraction<Matrix<T>, D>(lhs, rhs);
+    assert(rows && columns);
 }
-template <class T, class D, typename std::enable_if<std::is_arithmetic<D>::value, int>::type = 0>
-MatrixSubtraction<D, Matrix<T>> operator-(const D& lhs, const Matrix<T>& rhs)
+
+template <class T>
+Matrix<T>::Matrix(const Matrix& rhs):
+    m_rows(rhs.m_rows),
+    m_columns(rhs.m_columns)
+{}
+
+template <class T>
+Matrix<T>& Matrix<T>::operator=(const Matrix& rhs)
 {
-    return MatrixSubtraction<D, Matrix<T>>(lhs, rhs);
+    assert(m_rows == rhs.m_rows && m_columns == rhs.m_columns);
+    return *this;
+}
+
+template <class T>
+Matrix<T>::Matrix(Matrix&& rhs):
+    m_rows(std::move(rhs.m_rows)),
+    m_columns(std::move(rhs.m_columns))
+{}
+
+template <class T>
+Matrix<T>& Matrix<T>::operator=(Matrix&& rhs)
+{
+    assert(m_rows == rhs.m_rows && m_columns == rhs.m_columns);
+    return *this;
+}
+
+template <class T>
+template <class TT>
+Matrix<T>::Matrix(const Matrix<TT>& rhs):
+    m_rows(rhs.rows()),
+    m_columns(rhs.columns())
+{}
+
+template <class T>
+template <class TT>
+Matrix<T>& Matrix<T>::operator=(const Matrix<TT>& rhs)
+{
+    assert(m_rows == rhs.rows() && m_columns == rhs.columns());
+    return *this;
 }
 
 #endif
